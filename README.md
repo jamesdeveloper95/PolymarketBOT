@@ -24,7 +24,7 @@
 - [What it does](#what-it-does)
 - [How it works](#how-it-works)
 - [Architecture](#architecture)
-- [Screenshot](#screenshot)
+- [Dashboard preview](#dashboard-preview)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Configuration](#configuration)
@@ -100,16 +100,9 @@ No cloud account or third-party API keys required. The bot and UI run entirely o
 
 ---
 
-## Screenshot
+## Dashboard preview
 
-The image at the top of this README is the **dashboard** (our bot’s interface). To add or update it:
-
-1. Run the bot: `python polymarketAI.py`
-2. Open the dashboard in your browser: **http://localhost:8765**
-3. Take a screenshot of the page (e.g. Win+Shift+S or your browser’s capture tool)
-4. Save it as **`screenshot.png`** in this project folder (same folder as `README.md`)
-
-The README will then show your dashboard at the top.
+The screenshot at the top shows the live local dashboard used for scanning markets, monitoring opportunities, and managing risk.
 
 ---
 
@@ -355,7 +348,7 @@ This bot is for **educational and personal use** only. Trading on prediction mar
 
 ## License
 
-MIT (or your choice — update as needed.)
+MIT
 
 ---
 
