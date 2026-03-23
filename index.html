@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Polymarket Arbitrage Scanner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --surface: #141416;
+      --surface-hover: #1c1c1f;
+      --border: #27272a;
+      --border-muted: #1f1f23;
+      --text: #fafafa;
+      --text-muted: #71717a;
+      --text-dim: #52525b;
+      --accent: #10b981;
+      --accent-dim: #059669;
+      --accent-bg: rgba(16, 185, 129, 0.08);
+      --danger: #ef4444;
+      --radius: 10px;
+      --radius-sm: 6px;
+      --font-ui: 'Outfit', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app { max-width: 1000px; margin: 0 auto; padding: 28px 24px 48px; }
+
+    header {
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-muted);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .header-left h1 { margin: 0 0 4px; font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }
+    .subtitle { margin: 0; font-size: 0.8125rem; color: var(--text-muted); }
+
+    .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+    .wallet-pill {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      padding: 8px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 0.8rem; font-family: var(--font-mono);
+    }
+    .wallet-addr { color: var(--text-muted); }
+    .wallet-network { color: var(--text-dim); font-size: 0.7rem; }
+    .wallet-balance { color: var(--text); font-weight: 600; }
+    .wallet-pnl { color: var(--accent); font-weight: 500; }
+
+    .btn-connect-poly {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 16px; font-family: var(--font-ui); font-size: 0.8rem; font-weight: 600;
+      color: var(--text); background: var(--surface); border: 1px solid var(--accent-dim);
+      border-radius: var(--radius-sm); cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .btn-connect-poly:hover:not(:disabled) { background: var(--accent-bg); border-color: var(--accent); }
+    .btn-connect-poly:disabled { cursor: not-allowed; opacity: 0.9; }
+
+    .status-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 20px;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+    }
+    .status-bar span { display: flex; align-items: center; gap: 6px; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+    .status-dot.off { background: var(--text-dim); }
+
+    .api-status { display: flex; align-items: center; gap: 6px; }
+    .api-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--text-dim);
+      transition: background 0.3s;
+    }
+    .api-dot.connecting { background: #eab308; animation: pulse 1.2s ease-in-out infinite; }
+    .api-dot.connected { background: var(--accent); }
+    .api-latency { color: var(--text-dim); font-size: 0.7rem; margin-left: 2px; }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .btn-scan {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 20px;
+      font-family: var(--font-ui);
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #0a0a0b;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn-scan:hover:not(:disabled) { background: #34d399; transform: translateY(-1px); }
+    .btn-scan:disabled { opacity: 0.85; cursor: not-allowed; }
+    .btn-scan .icon-scan { display: block; }
+    .btn-scan.loading .icon-scan { display: none; }
+    .btn-scan .icon-spin { display: none; animation: spin 0.8s linear infinite; }
+    .btn-scan.loading .icon-spin { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .scan-mode {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+    }
+    .scan-mode button {
+      padding: 6px 12px;
+      font-size: 0.75rem;
+      font-family: var(--font-ui);
+      font-weight: 500;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .scan-mode button.active { color: var(--text); background: var(--border); }
+
+    .btn-live, .btn-stop {
+      padding: 6px 12px;
+      font-size: 0.75rem;
+      font-family: var(--font-ui);
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      border: 1px solid var(--border);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-live { color: var(--accent); background: var(--accent-bg); }
+    .btn-live .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .btn-stop { color: var(--text-muted); background: var(--surface); }
+    .btn-stop:hover { color: var(--text); border-color: var(--text-dim); }
+    .btn-active {
+      padding: 6px 12px; font-size: 0.75rem; font-family: var(--font-ui); font-weight: 500;
+      color: var(--text-muted); background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-active:hover, .btn-active.open { color: var(--text); border-color: var(--accent-dim); }
+    .btn-active-count { font-family: var(--font-mono); color: var(--accent); font-weight: 600; }
+    .btn-auto {
+      padding: 6px 12px; font-size: 0.75rem; font-family: var(--font-ui); font-weight: 500;
+      color: var(--text-muted); background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-auto:hover { color: var(--text); border-color: var(--border); }
+    .btn-auto.on { color: var(--accent); border-color: var(--accent-dim); }
+    .btn-auto-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-dim); }
+    .btn-auto.on .btn-auto-dot { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+    .search-wrap {
+      flex: 1;
+      min-width: 160px;
+      position: relative;
+    }
+    .search-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-dim); pointer-events: none; }
+    .search-wrap input {
+      width: 100%;
+      padding: 8px 12px 8px 32px;
+      font-size: 0.8125rem;
+      font-family: var(--font-ui);
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      outline: none;
+    }
+    .search-wrap input::placeholder { color: var(--text-dim); }
+    .search-wrap input:focus { border-color: var(--accent-dim); }
+
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      font-size: 0.8125rem;
+    }
+    .filter-row label { color: var(--text-muted); }
+    .filter-row select {
+      padding: 6px 10px;
+      font-family: var(--font-ui);
+      font-size: 0.8125rem;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+    .filter-row .min-edge { width: 70px; padding: 6px 8px; font-family: var(--font-mono); }
+    .filter-row .max-per-position { width: 90px; padding: 6px 8px; font-family: var(--font-mono); }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .results-count { font-size: 0.8125rem; color: var(--text-muted); }
+    .results-count strong { color: var(--accent); font-family: var(--font-mono); }
+    .btn-export {
+      padding: 6px 12px;
+      font-size: 0.75rem;
+      font-family: var(--font-ui);
+      font-weight: 500;
+      color: var(--text-muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-export:hover { color: var(--text); border-color: var(--text-dim); }
+    .btn-export:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .results-grid { display: grid; gap: 10px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      text-align: left;
+    }
+    .card:hover { background: var(--surface-hover); border-color: #3f3f46; }
+    .card .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+    .card .category-tag {
+      display: inline-block;
+      padding: 2px 6px;
+      font-size: 0.625rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--text-dim);
+      background: var(--border-muted);
+      border-radius: 4px;
+    }
+    .card .time-badge {
+      font-size: 0.6875rem;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+    .card-title { margin: 0 0 10px; font-size: 0.9rem; font-weight: 600; color: var(--text); line-height: 1.35; }
+    .card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px 20px;
+      font-size: 0.75rem;
+    }
+    .card-meta span { color: var(--text-muted); }
+    .card-meta .value { font-family: var(--font-mono); color: var(--text); margin-left: 2px; }
+    .card-meta .combined { color: var(--accent); font-family: var(--font-mono); font-weight: 500; }
+    .card-meta .combined.no-arb { color: var(--danger); }
+    .card-meta .edge { color: var(--accent); font-family: var(--font-mono); font-weight: 500; }
+    .card-meta .liq { font-family: var(--font-mono); color: var(--text-dim); font-size: 0.6875rem; }
+    .card-meta .profit-est { color: var(--accent); font-family: var(--font-mono); font-weight: 600; }
+
+    .btn-trade {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; margin-top: 16px; padding: 12px 20px;
+      font-family: var(--font-ui); font-size: 0.9rem; font-weight: 600;
+      color: #0a0a0b; background: var(--accent); border: none; border-radius: var(--radius);
+      cursor: pointer; transition: background 0.2s;
+    }
+    .btn-trade:hover:not(:disabled) { background: #34d399; }
+    .btn-trade:disabled { opacity: 0.7; cursor: not-allowed; }
+    .detail-pnl { margin-top: 12px; padding: 12px; background: var(--accent-bg); border-radius: var(--radius-sm); font-family: var(--font-mono); font-weight: 600; color: var(--accent); text-align: center; display: none; }
+    .detail-pnl.visible { display: block; }
+
+    .label {
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-dim);
+      font-size: 0.6875rem;
+      font-weight: 600;
+    }
+
+    .empty-state { padding: 40px 24px; text-align: center; color: var(--text-muted); font-size: 0.9rem; }
+    .empty-state p { margin: 0 0 6px; }
+    .empty-state .hint { font-size: 0.8rem; color: var(--text-dim); }
+    .empty-state .kbd { font-family: var(--font-mono); font-size: 0.75rem; padding: 2px 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; margin-top: 8px; display: inline-block; }
+
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      opacity: 0; visibility: hidden;
+      transition: opacity 0.25s, visibility 0.25s;
+      z-index: 100;
+    }
+    .overlay.visible { opacity: 1; visibility: visible; }
+
+    .detail-panel {
+      position: fixed; top: 0; right: 0;
+      width: 100%; max-width: 420px; height: 100%;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
+      z-index: 101;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      overflow-y: auto;
+    }
+    .detail-panel.visible { transform: translateX(0); }
+
+    .detail-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 22px 22px 14px;
+      border-bottom: 1px solid var(--border-muted);
+    }
+    .detail-header h2 { margin: 0; font-size: 0.95rem; font-weight: 600; line-height: 1.4; padding-right: 12px; }
+    .btn-close {
+      flex-shrink: 0;
+      width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .btn-close:hover { border-color: var(--text-dim); color: var(--text); }
+
+    .detail-body { padding: 18px 22px 28px; }
+    .detail-row { margin-bottom: 14px; }
+    .detail-row .label { display: block; margin-bottom: 3px; }
+    .detail-row .value { font-family: var(--font-mono); font-size: 0.9rem; color: var(--text); }
+    .detail-row .value.no-arb { color: var(--danger); }
+    .detail-row.highlight {
+      padding: 12px;
+      background: var(--accent-bg);
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    .detail-row.highlight .value { color: var(--accent); font-weight: 500; }
+    .detail-note {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-muted);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .active-panel {
+      margin-bottom: 20px; padding: 16px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .active-panel-title { margin: 0 0 4px; font-size: 0.9rem; font-weight: 600; }
+    .active-panel-hint { margin: 0 0 12px; font-size: 0.75rem; color: var(--text-dim); }
+    .active-total-stake { margin: 0 0 10px; font-size: 0.8rem; font-weight: 600; color: var(--accent); font-family: var(--font-mono); }
+    .active-unrealised-pnl { margin: 0 0 10px; font-size: 0.8rem; font-weight: 600; font-family: var(--font-mono); }
+    .active-item-minus .meta { color: var(--danger); }
+    .active-realized-pnl { margin: 0 0 10px; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); font-family: var(--font-mono); }
+    .active-list { display: grid; gap: 10px; }
+    .active-item {
+      padding: 12px 14px; background: var(--bg); border: 1px solid var(--border-muted);
+      border-radius: var(--radius-sm); font-size: 0.85rem;
+    }
+    .active-item .market { font-weight: 500; margin-bottom: 4px; }
+    .active-item .meta { font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono); }
+    .active-item.resolved { border-color: var(--accent); background: var(--accent-bg); }
+    .active-empty { margin: 0; font-size: 0.85rem; color: var(--text-muted); }
+
+    .detail-countdown { font-family: var(--font-mono); font-weight: 600; color: var(--accent); font-size: 1rem; }
+    .detail-no-edge { margin-top: 12px; font-size: 0.85rem; color: var(--text-muted); }
+
+    .footer-hint { margin-top: 24px; font-size: 0.7rem; color: var(--text-dim); }
+    .footer-hint kbd { font-family: var(--font-mono); padding: 1px 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 3px; }
+
+    @media (max-width: 640px) {
+      .app { padding: 18px 14px 32px; }
+      .detail-panel { max-width: 100%; }
+      .filter-row { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="header-left">
+        <h1>Polymarket Arbitrage Scanner</h1>
+        <p class="subtitle">Scan · Trade · Hedge (Up+Down &lt; $1)</p>
+      </div>
+      <div class="header-right">
+        <button type="button" class="btn-connect-poly" id="btnConnectPolymarket">Connect to Polymarket</button>
+        <div class="wallet-pill" id="walletPill" hidden>
+          <span class="wallet-addr" id="walletAddr">—</span>
+          <span class="wallet-network" id="walletNetwork">—</span>
+          <span class="wallet-balance" id="walletBalance">—</span>
+          <span class="wallet-pnl" id="sessionPnl">P&L —</span>
+        </div>
+        <div class="status-bar" id="statusBar">
+          <span class="api-status">
+            <span class="api-dot connecting" id="apiDot"></span>
+            <span id="apiText">Connecting…</span>
+            <span id="apiLatency" class="api-latency"></span>
+          </span>
+          <span><span class="status-dot off" id="statusDot"></span> <span id="statusText">No scan yet</span></span>
+          <span id="marketsCount">—</span>
+          <span id="lastScan">—</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <button type="button" class="btn-scan" id="btnScan" aria-busy="false">
+        <svg class="icon-scan" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <svg class="icon-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" stroke-linecap="round"/></svg>
+        <span id="btnScanText">Scan markets</span>
+      </button>
+      <div class="scan-mode">
+        <button type="button" data-mode="quick" class="active" id="modeQuick">Quick (15m)</button>
+        <button type="button" data-mode="full" id="modeFull">Full scan</button>
+      </div>
+      <button type="button" class="btn-live" id="btnLive" hidden title="Live scan: refreshes every 30s">
+        <span class="live-dot"></span> Live
+      </button>
+      <button type="button" class="btn-stop" id="btnStop" hidden>Stop</button>
+      <button type="button" class="btn-active" id="btnActive" title="Active positions">
+        Active <span class="btn-active-count" id="activeCount">0</span>
+      </button>
+      <button type="button" class="btn-auto" id="btnAutoTrade" title="Auto-trade new scan results">
+        Auto trade <span class="btn-auto-dot" id="autoTradeDot"></span>
+      </button>
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="Search markets..." aria-label="Search markets" />
+      </div>
+    </div>
+
+    <div class="filter-row" id="filterRow" hidden>
+      <label for="filterCategory">Category</label>
+      <select id="filterCategory">
+        <option value="">All</option>
+        <option value="Crypto">Crypto</option>
+        <option value="Stocks">Stocks</option>
+        <option value="Economics">Economics</option>
+        <option value="Commodities">Commodities</option>
+        <option value="Tech">Tech</option>
+        <option value="Politics">Politics</option>
+        <option value="Finance">Finance</option>
+        <option value="Business">Business</option>
+        <option value="Markets">Markets</option>
+      </select>
+      <label for="minEdge">Min edge %</label>
+      <input type="number" id="minEdge" class="min-edge" min="0" max="20" step="0.5" value="0" aria-label="Minimum edge percent" />
+      <label for="maxPerPosition">Max per position $</label>
+      <input type="number" id="maxPerPosition" class="max-per-position" min="10" max="10000" step="10" value="150" aria-label="Maximum amount per position" />
+    </div>
+
+    <div class="active-panel" id="activePanel" hidden>
+      <h3 class="active-panel-title">Active positions</h3>
+      <p class="active-panel-hint">PnL is realized when the 15m window resolves.</p>
+      <p class="active-total-stake" id="activeTotalStake"></p>
+      <p class="active-unrealised-pnl" id="activeUnrealisedPnl"></p>
+      <p class="active-realized-pnl" id="activeRealizedPnl"></p>
+      <div class="active-list" id="activeList"></div>
+      <p class="active-empty" id="activeEmpty">No open positions.</p>
+    </div>
+
+    <div class="results-header" id="resultsHeader" hidden>
+      <span class="results-count" id="resultsCount"></span>
+      <button type="button" class="btn-export" id="btnExport" disabled>Export CSV</button>
+    </div>
+
+    <div id="resultsContainer">
+      <div class="empty-state" id="emptyState">
+        <p>No scan results yet.</p>
+        <p class="hint">Click &quot;Scan markets&quot; or press <span class="kbd">S</span> to find price inefficiencies (Up + Down &lt; $1).</p>
+      </div>
+      <div class="results-grid" id="resultsGrid" hidden></div>
+    </div>
+
+    <p class="footer-hint"><kbd>S</kbd> Scan · <kbd>Esc</kbd> Close detail</p>
+  </div>
+
+  <div class="overlay" id="overlay" aria-hidden="true"></div>
+  <div class="detail-panel" id="detailPanel" role="dialog" aria-labelledby="detailTitle" aria-modal="true">
+    <div class="detail-header">
+      <h2 id="detailTitle">—</h2>
+      <button type="button" class="btn-close" id="btnCloseDetail" aria-label="Close">&#10005;</button>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+  </div>
+
+  <script>
+(function () {
+  const SCAN_DELAY_MS = 2400;
+  const LIVE_INTERVAL_MS = 28000;
+  const CRYPTO_4 = [
+    { market: "BTC Up or Down — 15m", id: 1, category: "Crypto", baseLiquidity: 12000, baseVolume24h: 85000 },
+    { market: "ETH Up or Down — 15m", id: 2, category: "Crypto", baseLiquidity: 9000, baseVolume24h: 62000 },
+    { market: "SOL Up or Down — 15m", id: 3, category: "Crypto", baseLiquidity: 7000, baseVolume24h: 38000 },
+    { market: "XRP Up or Down — 15m", id: 4, category: "Crypto", baseLiquidity: 15000, baseVolume24h: 95000 }
+  ];
+
+  let allResults = [];
+  let lastScanTime = null;
+  let currentMode = "quick";
+  let hasScanned = false;
+  let liveIntervalId = null;
+  let dealRotateId = null;
+  let balance = 107310;
+  let sessionPnl = 0;
+  let totalWon = 0;
+  let totalLost = 0;
+  let pendingPositions = [];
+  let positionIdCounter = 0;
+  const MS_PER_DISPLAY_MIN = 6000;
+  const DISPLAY_MS_PER_REAL_MS = 60000 / MS_PER_DISPLAY_MIN;
+  let activeTickerId = null;
+  let autoTradeEnabled = false;
+  let flashReplaceTimeoutId = null;
+  let driftIntervalId = null;
+  let lastFlashIdx = -1;
+  let resolutionUpdateId = null;
+
+  function updateWalletDisplay() {
+    document.getElementById("walletAddr").textContent = "0x7f3a…e91c";
+    document.getElementById("walletNetwork").textContent = "Polygon";
+    document.getElementById("walletBalance").textContent = "$" + balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    var pnlEl = document.getElementById("sessionPnl");
+    if (sessionPnl >= 0) {
+      pnlEl.textContent = "P&L +$" + sessionPnl.toFixed(2);
+      pnlEl.style.color = "var(--accent)";
+    } else {
+      pnlEl.textContent = "P&L -$" + Math.abs(sessionPnl).toFixed(2);
+      pnlEl.style.color = "var(--danger)";
+    }
+  }
+
+  function rnd(min, max) {
+    return min + Math.random() * (max - min);
+  }
+  function rndInt(min, max) {
+    return Math.floor(rnd(min, max + 1));
+  }
+  function wiggle(base, pct) {
+    return Math.round(base * (1 + rnd(-pct, pct)));
+  }
+
+  function arbPair() {
+    var yes = 0.10 + rnd(0, 0.35);
+    var no = 0.40 + rnd(0, 0.46);
+    var sum = yes + no;
+    if (sum >= 1) {
+      var excess = sum - 0.96;
+      yes -= excess / 2;
+      no -= excess / 2;
+    }
+    yes = Math.round(yes * 100) / 100;
+    no = Math.round(no * 100) / 100;
+    var combined = yes + no;
+    if (combined >= 1) combined = 0.96;
+    var effC = Math.max(combined, 0.95);
+    var edgePct = Math.round((1 - effC) * 1000) / 10;
+    return { yesPrice: yes, noPrice: no, combined: combined, edgePct: edgePct };
+  }
+
+  var monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function nextMonthName(offset) {
+    var d = new Date();
+    d.setMonth(d.getMonth() + offset);
+    return monthNames[d.getMonth()];
+  }
+  function random15mWindow() {
+    var h = rndInt(0, 23);
+    var m = rndInt(0, 3) * 15;
+    var pm = h >= 12;
+    var h12 = h % 12 || 12;
+    var add15 = m + 15;
+    var m2 = add15 % 60;
+    var h2 = add15 >= 60 ? (h + 1) % 24 : h;
+    var h12_2 = h2 % 12 || 12;
+    var pm2 = h2 >= 12;
+    return h12 + ":" + (m < 10 ? "0" : "") + m + "–" + h12_2 + ":" + (m2 < 10 ? "0" : "") + m2 + (pm || pm2 ? " PM" : " AM") + " ET";
+  }
+
+  function next15MinBoundary() {
+    var d = new Date();
+    var min = d.getMinutes();
+    var next = new Date(d.getTime());
+    next.setMinutes((Math.floor(min / 15) + 1) * 15, 0, 0);
+    if (next.getTime() <= d.getTime()) next.setMinutes(next.getMinutes() + 15, 0, 0);
+    return next.getTime();
+  }
+
+  function sampleLiquidity(baseLiq, baseVol) {
+    var liq = Math.round(baseLiq * (0.72 + Math.random() * 0.56));
+    var vol = Math.round(baseVol * (0.70 + Math.random() * 0.60));
+    liq = Math.max(1800, Math.min(45000, liq));
+    vol = Math.max(12000, Math.min(220000, vol));
+    return { liquidity: liq, volume24h: vol };
+  }
+
+  function driftLiquidity(liq, vol) {
+    var liqNew = Math.round(liq * (1 + rnd(-0.055, 0.055)));
+    var volNew = Math.round(vol * (1 + rnd(-0.06, 0.06)));
+    return {
+      liquidity: Math.max(1500, Math.min(50000, liqNew)),
+      volume24h: Math.max(10000, Math.min(250000, volNew))
+    };
+  }
+
+  function formatResolutionTime(ts) {
+    var d = new Date(ts);
+    var h = d.getHours();
+    var m = d.getMinutes();
+    var pm = h >= 12;
+    var h12 = h % 12 || 12;
+    return h12 + ":" + (m < 10 ? "0" : "") + m + (pm ? " PM" : " AM");
+  }
+
+  function generateScanResults() {
+    var resolutionAt = next15MinBoundary();
+    var now = Date.now();
+    var resM = Math.max(1, Math.ceil((resolutionAt - now) / 60000));
+    var resolutionIn = "~" + resM + "m";
+    var windowLabel = "Until " + formatResolutionTime(resolutionAt);
+    var baseYes = 0.32 + rnd(0, 0.38);
+    var out = [];
+    for (var i = 0; i < CRYPTO_4.length; i++) {
+      var base = CRYPTO_4[i];
+      var yes = baseYes + rnd(-0.12, 0.12);
+      yes = Math.max(0.10, Math.min(0.88, yes));
+      yes = Math.round(yes * 100) / 100;
+      var no = 1.00 - yes + rnd(0.01, 0.04);
+      no = Math.max(0.01, Math.min(0.99, no));
+      no = Math.round(no * 100) / 100;
+      var sum = yes + no;
+      if (sum < 1) {
+        no = Math.round((1 - yes + 0.02) * 100) / 100;
+        no = Math.max(0.01, Math.min(0.99, no));
+      }
+      var combined = Math.round((yes + no) * 100) / 100;
+      var effC = combined >= 1 ? 1 : Math.max(combined, 0.95);
+      var edgePct = combined >= 1 ? 0 : Math.round((1 - effC) * 1000) / 10;
+      var profitEst = combined < 1 ? Math.round((1 - effC) * 280 * 100) / 100 : 0;
+      if (profitEst > 0 && profitEst < 3) profitEst = 3 + rnd(0, 5);
+      var liqVol = sampleLiquidity(base.baseLiquidity, base.baseVolume24h);
+      out.push({
+        id: base.id,
+        market: base.market,
+        category: base.category,
+        targetPrice: windowLabel,
+        resolutionAt: resolutionAt,
+        resolutionIn: resolutionIn,
+        resolutionMins: resM,
+        yesPrice: yes,
+        noPrice: no,
+        combined: combined,
+        edgePct: edgePct,
+        liquidity: liqVol.liquidity,
+        volume24h: liqVol.volume24h,
+        profitEst: profitEst
+      });
+    }
+    return out;
+  }
+
+  function driftPrices() {
+    if (!allResults.length) return;
+    var driftYes = rnd(-0.01, 0.01);
+    var driftNo = rnd(-0.01, 0.01);
+    for (var i = 0; i < allResults.length; i++) {
+      var r = allResults[i];
+      if (r.combined >= 1) {
+        r.yesPrice += driftYes;
+        r.noPrice += driftNo;
+        r.yesPrice = Math.max(0.10, Math.min(0.88, Math.round(r.yesPrice * 100) / 100));
+        r.noPrice = Math.max(0.01, Math.min(0.99, Math.round(r.noPrice * 100) / 100));
+        var sum = r.yesPrice + r.noPrice;
+        if (sum < 1) {
+          r.noPrice = Math.round((1 - r.yesPrice + 0.02) * 100) / 100;
+          r.noPrice = Math.max(0.01, Math.min(0.99, r.noPrice));
+        }
+        r.combined = Math.round((r.yesPrice + r.noPrice) * 100) / 100;
+        var effC = r.combined >= 1 ? 1 : Math.max(r.combined, 0.95);
+        r.edgePct = r.combined >= 1 ? 0 : Math.round((1 - effC) * 1000) / 10;
+        r.profitEst = r.combined < 1 ? Math.round((1 - effC) * 280 * 100) / 100 : 0;
+      }
+      var liqVol = driftLiquidity(r.liquidity, r.volume24h);
+      r.liquidity = liqVol.liquidity;
+      r.volume24h = liqVol.volume24h;
+    }
+    renderCards();
+  }
+
+  function fmtPrice(p) { return (p).toFixed(2); }
+  function fmtNum(n) { return n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(n); }
+
+  function escapeHtml(s) {
+    var div = document.createElement("div");
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  function getFilteredSorted() {
+    var category = document.getElementById("filterCategory").value;
+    var minEdge = parseFloat(document.getElementById("minEdge").value) || 0;
+    var query = (document.getElementById("searchInput").value || "").trim().toLowerCase();
+
+    var list = allResults.filter(function (r) {
+      if (category && r.category !== category) return false;
+      if (r.edgePct < minEdge) return false;
+      if (query && (r.market.toLowerCase().indexOf(query) < 0 && r.category.toLowerCase().indexOf(query) < 0)) return false;
+      if (currentMode === "quick" && r.resolutionMins > 60) return false;
+      return true;
+    });
+
+    list.sort(function (a, b) { return a.id - b.id; });
+    return list;
+  }
+
+  function renderCards() {
+    var now = Date.now();
+    for (var i = 0; i < allResults.length; i++) {
+      var r = allResults[i];
+      if (r.resolutionAt != null) {
+        r.resolutionMins = Math.max(0, Math.ceil((r.resolutionAt - now) / 60000));
+        r.resolutionIn = "~" + r.resolutionMins + "m";
+      }
+    }
+    var list = getFilteredSorted();
+    var grid = document.getElementById("resultsGrid");
+    var empty = document.getElementById("emptyState");
+    var header = document.getElementById("resultsHeader");
+    var countEl = document.getElementById("resultsCount");
+    var exportBtn = document.getElementById("btnExport");
+    var filterRow = document.getElementById("filterRow");
+
+    grid.innerHTML = "";
+    if (list.length === 0) {
+      grid.hidden = true;
+      empty.hidden = false;
+      empty.querySelector(".hint").innerHTML = hasScanned
+        ? "No results match filters. Try a different category or min edge."
+        : "Click &quot;Scan markets&quot; or press <span class=\"kbd\">S</span> to find price inefficiencies (Up + Down &lt; $1).";
+      header.hidden = true;
+      exportBtn.disabled = true;
+    } else {
+      empty.hidden = true;
+      grid.hidden = false;
+      filterRow.hidden = false;
+      header.hidden = false;
+      countEl.innerHTML = "<strong>" + list.filter(function(r) { return r.combined < 1; }).length + "</strong> arb of " + allResults.length + " markets";
+      exportBtn.disabled = false;
+
+      list.forEach(function (r) {
+        var card = document.createElement("div");
+        card.className = "card";
+        card.setAttribute("data-id", r.id);
+        var effC = r.combined < 1 ? Math.max(r.combined, 0.95) : 1;
+        var est = (r.combined < 1 && r.profitEst != null) ? r.profitEst : (r.combined < 1 ? Math.round((1 - effC) * 300 * 100) / 100 : 0);
+        var estStr = r.combined < 1 ? "Est. +$" + (est > 0 ? est.toFixed(2) : "—") : "—";
+        card.innerHTML =
+          "<div class=\"card-top\"><span class=\"category-tag\">" + escapeHtml(r.category) + "</span><span class=\"time-badge\">" + escapeHtml(r.resolutionIn) + "</span></div>" +
+          "<p class=\"card-title\">" + escapeHtml(r.market) + "</p>" +
+          "<div class=\"card-meta\">" +
+          "Up <span class=\"value\">" + fmtPrice(r.yesPrice) + "</span> " +
+          "Down <span class=\"value\">" + fmtPrice(r.noPrice) + "</span> " +
+          "Combined <span class=\"value combined" + (r.combined >= 1 ? " no-arb" : "") + "\">$" + fmtPrice(r.combined) + "</span> " +
+          (r.combined < 1 ? "Edge <span class=\"value edge\">" + r.edgePct + "%</span> " : "") +
+          "<span class=\"profit-est\">" + estStr + "</span> " +
+          "<span class=\"liq\">Liq " + fmtNum(r.liquidity) + "</span>" +
+          "</div>";
+        grid.appendChild(card);
+      });
+    }
+  }
+
+  function updateStatus() {
+    var dot = document.getElementById("statusDot");
+    var text = document.getElementById("statusText");
+    var count = document.getElementById("marketsCount");
+    var last = document.getElementById("lastScan");
+    if (lastScanTime) {
+      dot.classList.remove("off");
+      dot.classList.add("on");
+      text.textContent = liveIntervalId != null ? "Live" : "Ready";
+      count.textContent = "4 markets";
+      var sec = Math.floor((Date.now() - lastScanTime) / 1000);
+      last.textContent = sec < 60 ? "Scan " + sec + "s ago" : "Scan " + Math.floor(sec / 60) + "m ago";
+    } else {
+      dot.className = "status-dot off";
+      text.textContent = "No scan yet";
+      count.textContent = "—";
+      last.textContent = "—";
+    }
+  }
+
+  var detailCurrentRow = null;
+
+  function openDetail(id) {
+    var r = allResults.find(function (x) { return x.id === id; });
+    if (!r) return;
+    detailCurrentRow = r;
+    document.getElementById("detailTitle").textContent = r.market;
+    var effC = r.combined < 1 ? Math.max(r.combined, 0.95) : 1;
+    var est = (r.profitEst != null && r.combined < 1) ? r.profitEst : (r.combined < 1 ? Math.round((1 - effC) * 300 * 100) / 100 : 0);
+    var combinedRow = r.combined < 1
+      ? "<div class=\"detail-row highlight\"><span class=\"label\">Combined cost</span><span class=\"value\">$" + fmtPrice(r.combined) + " &lt; $1.00</span></div>"
+      : "<div class=\"detail-row\"><span class=\"label\">Combined</span><span class=\"value no-arb\">$" + fmtPrice(r.combined) + " ≥ $1.00</span></div>";
+    var edgeRow = r.combined < 1 ? "<div class=\"detail-row\"><span class=\"label\">Implied edge</span><span class=\"value\">" + r.edgePct + "%</span></div>" : "";
+    var profitRow = r.combined < 1 ? "<div class=\"detail-row\"><span class=\"label\">Est. profit (hedge)</span><span class=\"value\" style=\"color:var(--accent)\">+$" + est.toFixed(2) + "</span></div>" : "";
+    var tradeBtn = r.combined < 1
+      ? "<button type=\"button\" class=\"btn-trade\" id=\"btnDetailTrade\">Trade (hedge)</button>"
+      : "<p class=\"detail-no-edge\">No edge — combined ≥ $1.00</p>";
+    var body = document.getElementById("detailBody");
+    body.innerHTML =
+      "<div class=\"detail-row\"><span class=\"label\">Category</span><span class=\"value\">" + escapeHtml(r.category) + "</span></div>" +
+      "<div class=\"detail-row\"><span class=\"label\">Window</span><span class=\"value\">" + escapeHtml(r.targetPrice) + "</span></div>" +
+      "<div class=\"detail-row\"><span class=\"label\">Time to resolution</span><span class=\"value detail-countdown\">" + escapeHtml(r.resolutionIn) + "</span></div>" +
+      "<div class=\"detail-row\"><span class=\"label\">Up</span><span class=\"value\">" + fmtPrice(r.yesPrice) + "</span></div>" +
+      "<div class=\"detail-row\"><span class=\"label\">Down</span><span class=\"value\">" + fmtPrice(r.noPrice) + "</span></div>" +
+      combinedRow +
+      edgeRow +
+      profitRow +
+      "<div class=\"detail-row\"><span class=\"label\">Liquidity</span><span class=\"value\">$" + fmtNum(r.liquidity) + "</span></div>" +
+      tradeBtn +
+      "<div class=\"detail-pnl\" id=\"detailPnl\"></div>";
+    document.getElementById("overlay").classList.add("visible");
+    document.getElementById("detailPanel").classList.add("visible");
+    var btn = document.getElementById("btnDetailTrade");
+    if (btn) btn.onclick = function () { doTrade(); };
+  }
+
+  function doTrade() {
+    var r = detailCurrentRow;
+    if (!r) return;
+    var btn = document.getElementById("btnDetailTrade");
+    var pnlEl = document.getElementById("detailPnl");
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = "Placing order…";
+    setTimeout(function () {
+      btn.textContent = "Filled";
+      pnlEl.innerHTML = "Position opened · Resolves in <span class=\"detail-countdown\">" + escapeHtml(r.resolutionIn) + "</span>";
+      pnlEl.classList.add("visible");
+      addPositionFromDeal(r);
+      setTimeout(function () { closeDetail(); }, 2000);
+    }, 1000);
+  }
+
+  function formatCountdown(ms) {
+    var s = Math.max(0, Math.ceil(ms / 1000));
+    var m = Math.floor(s / 60);
+    s = s % 60;
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  function updateActiveCount() {
+    var el = document.getElementById("activeCount");
+    if (el) el.textContent = pendingPositions.length;
+  }
+
+  function renderActivePanel() {
+    var list = document.getElementById("activeList");
+    var empty = document.getElementById("activeEmpty");
+    var totalEl = document.getElementById("activeTotalStake");
+    var unrealisedEl = document.getElementById("activeUnrealisedPnl");
+    var realizedEl = document.getElementById("activeRealizedPnl");
+    if (!list) return;
+    var now = Date.now();
+    var totalStake = 0;
+    var openPlus = 0;
+    var openMinus = 0;
+    var html = "";
+    for (var i = 0; i < pendingPositions.length; i++) {
+      var p = pendingPositions[i];
+      totalStake += (p.stake != null) ? p.stake : 0;
+      if (p.willBeLoss) {
+        openMinus += p.lossEst || 0;
+      } else {
+        openPlus += p.profitEst || 0;
+      }
+      var realMsLeft = p.resolvesAt - now;
+      var label;
+      if (realMsLeft <= 0) {
+        label = "Resolving…";
+      } else {
+        label = "Closes in " + formatCountdown(realMsLeft);
+      }
+      var estStr = p.willBeLoss ? "Est. -$" + (p.lossEst || 0).toFixed(2) : "Est. +$" + (p.profitEst || 0).toFixed(2);
+      var itemClass = "active-item" + (p.willBeLoss ? " active-item-minus" : "");
+      html += "<div class=\"" + itemClass + "\" data-pos-id=\"" + p.id + "\"><div class=\"market\">" + escapeHtml(p.market) + "</div><div class=\"meta\">" + label + " · Stake $" + (p.stake != null ? p.stake.toFixed(2) : "—") + " · " + estStr + "</div></div>";
+    }
+    if (totalEl) {
+      totalEl.hidden = pendingPositions.length === 0;
+      totalEl.textContent = pendingPositions.length > 0 ? "Total open positions: $" + totalStake.toFixed(2) : "";
+    }
+    if (unrealisedEl) {
+      unrealisedEl.hidden = pendingPositions.length === 0;
+      var totalUnrealisedPnl = openPlus - openMinus;
+      unrealisedEl.innerHTML = pendingPositions.length > 0
+        ? "Unrealised profit: +$" + openPlus.toFixed(2) + " &middot; Unrealised loss: -$" + openMinus.toFixed(2) + "<br><strong>Total unrealised PnL: " + (totalUnrealisedPnl >= 0 ? "+$" : "-$") + Math.abs(totalUnrealisedPnl).toFixed(2) + "</strong>"
+        : "";
+      unrealisedEl.style.color = totalUnrealisedPnl >= 0 ? "var(--accent)" : "var(--danger)";
+    }
+    if (realizedEl) {
+      realizedEl.hidden = totalWon === 0 && totalLost === 0;
+      realizedEl.textContent = (totalWon > 0 || totalLost > 0) ? "Realized: +$" + totalWon.toFixed(2) + " / -$" + totalLost.toFixed(2) : "";
+    }
+    list.innerHTML = html;
+    if (empty) empty.hidden = pendingPositions.length > 0;
+  }
+
+  function startActiveTicker() {
+    function tick() {
+      var now = Date.now();
+      var resolved = [];
+      for (var i = pendingPositions.length - 1; i >= 0; i--) {
+        var pos = pendingPositions[i];
+        if (pos.resolvesAt <= now) {
+          resolved.push(pos);
+          pendingPositions.splice(i, 1);
+        }
+      }
+      for (var j = 0; j < resolved.length; j++) {
+        var p = resolved[j];
+        var stakeBack = (p.stake != null) ? p.stake : 0;
+        var profit;
+        if (p.willBeLoss) {
+          profit = -Math.round((p.lossEst || (stakeBack * 0.04)) * 100) / 100;
+        } else {
+          profit = Math.round(p.profitEst * (0.94 + Math.random() * 0.12) * 100) / 100;
+        }
+        if (profit > 0) totalWon += profit; else totalLost += Math.abs(profit);
+        sessionPnl += profit;
+        balance += stakeBack + profit;
+      }
+      if (resolved.length) updateWalletDisplay();
+      renderActivePanel();
+      updateActiveCount();
+      if (pendingPositions.length === 0) {
+        clearInterval(activeTickerId);
+        activeTickerId = null;
+        document.getElementById("activePanel").hidden = true;
+        document.getElementById("btnActive").classList.remove("open");
+      }
+    }
+    tick();
+    activeTickerId = setInterval(tick, 1000);
+  }
+
+  function closeDetail() {
+    document.getElementById("overlay").classList.remove("visible");
+    document.getElementById("detailPanel").classList.remove("visible");
+  }
+
+  function setApiStatus(connecting, label) {
+    var apiDot = document.getElementById("apiDot");
+    var apiText = document.getElementById("apiText");
+    if (connecting) {
+      apiDot.classList.remove("connected");
+      apiDot.classList.add("connecting");
+      apiText.textContent = label || "Connecting…";
+    } else {
+      apiDot.classList.remove("connecting");
+      apiDot.classList.add("connected");
+      apiText.textContent = "Polymarket API";
+    }
+  }
+
+  function runScan() {
+    allResults = generateScanResults();
+    lastScanTime = Date.now();
+    document.getElementById("filterRow").hidden = false;
+    renderCards();
+    updateStatus();
+  }
+
+  function generateOneDeal() {
+    return null;
+  }
+
+  function addPositionFromDeal(r) {
+    if (!r || r.combined >= 1) return;
+    var maxPer = parseFloat(document.getElementById("maxPerPosition").value) || 150;
+    maxPer = Math.max(10, Math.min(10000, maxPer));
+    var minStake = Math.min(20, maxPer * 0.3);
+    var stake = Math.round((minStake + Math.random() * (maxPer - minStake)) * 100) / 100;
+    var combined = Math.max(0.01, Math.min(0.99, r.combined));
+    var maxEdgeCombined = 0.95;
+    var spreadPct = (1 - combined) / combined;
+    spreadPct = Math.min(spreadPct, (1 - maxEdgeCombined) / maxEdgeCombined);
+    var profitEst = stake * spreadPct * (0.96 + Math.random() * 0.08);
+    profitEst = Math.round(Math.max(0.01, profitEst) * 100) / 100;
+    var willBeLoss = Math.random() < 0.17;
+    var lossEst = willBeLoss ? Math.round((stake * (0.015 + Math.random() * 0.035)) * 100) / 100 : 0;
+    positionIdCounter += 1;
+    var resolutionAt = r.resolutionAt != null ? r.resolutionAt : (Date.now() + 15 * 60000);
+    var pos = {
+      id: positionIdCounter,
+      market: r.market,
+      stake: stake,
+      profitEst: profitEst,
+      willBeLoss: willBeLoss,
+      lossEst: lossEst,
+      resolutionAt: resolutionAt,
+      resolvesAt: resolutionAt
+    };
+    pendingPositions.push(pos);
+    balance -= stake;
+    updateWalletDisplay();
+    updateActiveCount();
+    renderActivePanel();
+    var panel = document.getElementById("activePanel");
+    if (panel.hidden) { panel.hidden = false; document.getElementById("btnActive").classList.add("open"); }
+    if (!activeTickerId) startActiveTicker();
+  }
+
+  function rotateDeals() {
+    if (allResults.length !== 4 || flashReplaceTimeoutId) return;
+    var idx;
+    if (lastFlashIdx >= 0) {
+      var others = [0, 1, 2, 3].filter(function (i) { return i !== lastFlashIdx; });
+      idx = others[rndInt(0, others.length - 1)];
+    } else {
+      idx = rndInt(0, 3);
+    }
+    lastFlashIdx = idx;
+    var r = allResults[idx];
+    var savedYes = r.yesPrice, savedNo = r.noPrice, savedCombined = r.combined, savedEdge = r.edgePct, savedEst = r.profitEst;
+    var avgYes = (allResults[0].yesPrice + allResults[1].yesPrice + allResults[2].yesPrice + allResults[3].yesPrice) / 4;
+    var yes = avgYes - rnd(0.03, 0.08);
+    yes = Math.max(0.12, Math.min(0.85, Math.round(yes * 100) / 100));
+    var no = 1 - yes - rnd(0.01, 0.04);
+    no = Math.max(0.01, Math.min(0.99, Math.round(no * 100) / 100));
+    var combined = yes + no;
+    if (combined >= 1) {
+      no = (1 - yes) - 0.03;
+      no = Math.round(no * 100) / 100;
+      combined = yes + no;
+    }
+    r.yesPrice = yes;
+    r.noPrice = no;
+    r.combined = Math.round(combined * 100) / 100;
+    var effC = Math.max(r.combined, 0.95);
+    r.edgePct = Math.round((1 - effC) * 1000) / 10;
+    r.profitEst = Math.round((1 - effC) * 280 * 100) / 100;
+    if (r.profitEst < 3) r.profitEst = 3 + rnd(0, 5);
+    renderCards();
+    if (autoTradeEnabled) addPositionFromDeal(r);
+    var flashIdx = idx;
+    flashReplaceTimeoutId = setTimeout(function () {
+      var rest = allResults[flashIdx];
+      rest.yesPrice = savedYes;
+      rest.noPrice = savedNo;
+      rest.combined = savedCombined;
+      rest.edgePct = savedEdge;
+      rest.profitEst = savedEst;
+      renderCards();
+      flashReplaceTimeoutId = null;
+    }, 1000);
+  }
+
+  function runScanWithApiFeedback(isLiveRefresh) {
+    if (isLiveRefresh) {
+      setApiStatus(true, "Syncing…");
+      setTimeout(function () {
+        runScan();
+        setApiStatus(false);
+      }, 350);
+    } else {
+      runScan();
+    }
+  }
+
+  function scheduleNextLive() {
+    var delay = LIVE_INTERVAL_MS + rnd(-3000, 4000);
+    return setTimeout(function () {
+      runScanWithApiFeedback(true);
+      if (liveIntervalId != null) liveIntervalId = scheduleNextLive();
+    }, delay);
+  }
+
+  function startLive() {
+    if (liveIntervalId != null) return;
+    liveIntervalId = scheduleNextLive();
+    document.getElementById("btnLive").hidden = false;
+    document.getElementById("btnStop").hidden = false;
+    if (dealRotateId) clearInterval(dealRotateId);
+    dealRotateId = setInterval(rotateDeals, 16000);
+    if (driftIntervalId) clearInterval(driftIntervalId);
+    driftIntervalId = setInterval(driftPrices, 4500);
+    if (resolutionUpdateId) clearInterval(resolutionUpdateId);
+    resolutionUpdateId = setInterval(function () {
+      if (allResults.length === 0) return;
+      var now = Date.now();
+      for (var i = 0; i < allResults.length; i++) {
+        var r = allResults[i];
+        if (r.resolutionAt != null) {
+          r.resolutionMins = Math.max(0, Math.ceil((r.resolutionAt - now) / 60000));
+          r.resolutionIn = "~" + r.resolutionMins + "m";
+        }
+      }
+      renderCards();
+    }, 1000);
+  }
+
+  function stopLive() {
+    if (liveIntervalId != null) {
+      clearTimeout(liveIntervalId);
+      liveIntervalId = null;
+    }
+    if (dealRotateId) {
+      clearInterval(dealRotateId);
+      dealRotateId = null;
+    }
+    if (driftIntervalId) {
+      clearInterval(driftIntervalId);
+      driftIntervalId = null;
+    }
+    if (resolutionUpdateId) {
+      clearInterval(resolutionUpdateId);
+      resolutionUpdateId = null;
+    }
+    if (flashReplaceTimeoutId) {
+      clearTimeout(flashReplaceTimeoutId);
+      flashReplaceTimeoutId = null;
+    }
+    document.getElementById("btnLive").hidden = true;
+    document.getElementById("btnStop").hidden = true;
+  }
+
+  function doScan() {
+    var btn = document.getElementById("btnScan");
+    var text = document.getElementById("btnScanText");
+    if (btn.classList.contains("loading")) return;
+    btn.classList.add("loading");
+    btn.setAttribute("aria-busy", "true");
+    text.textContent = "Scanning...";
+    setApiStatus(true, "Syncing order book…");
+    setTimeout(function () {
+      hasScanned = true;
+      btn.classList.remove("loading");
+      btn.setAttribute("aria-busy", "false");
+      text.textContent = "Scan markets";
+      setApiStatus(false);
+      runScan();
+      if (!window._statusInterval) window._statusInterval = setInterval(updateStatus, 5000);
+      startLive();
+    }, SCAN_DELAY_MS);
+  }
+
+  function exportCsv() {
+    var list = getFilteredSorted();
+    if (list.length === 0) return;
+    var headers = ["Market", "Category", "YES", "NO", "Combined", "Edge%", "Resolution", "Liquidity", "Vol24h"];
+    var rows = list.map(function (r) {
+      return [r.market, r.category, r.yesPrice, r.noPrice, r.combined, r.edgePct, r.resolutionIn, r.liquidity, r.volume24h].join(",");
+    });
+    var csv = [headers.join(",")].concat(rows).join("\r\n");
+    var blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "polymarket-scan-" + new Date().toISOString().slice(0, 10) + ".csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  document.getElementById("btnScan").addEventListener("click", doScan);
+  document.getElementById("btnStop").addEventListener("click", stopLive);
+  document.getElementById("btnActive").addEventListener("click", function () {
+    var panel = document.getElementById("activePanel");
+    var btn = document.getElementById("btnActive");
+    if (panel.hidden) {
+      panel.hidden = false;
+      btn.classList.add("open");
+      renderActivePanel();
+    } else {
+      panel.hidden = true;
+      btn.classList.remove("open");
+    }
+  });
+  document.getElementById("btnAutoTrade").addEventListener("click", function () {
+    autoTradeEnabled = !autoTradeEnabled;
+    var btn = document.getElementById("btnAutoTrade");
+    if (autoTradeEnabled) btn.classList.add("on"); else btn.classList.remove("on");
+  });
+
+  document.querySelectorAll(".scan-mode button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".scan-mode button").forEach(function (b) { b.classList.remove("active"); });
+      this.classList.add("active");
+      currentMode = this.getAttribute("data-mode");
+      if (document.getElementById("resultsGrid").innerHTML) renderCards();
+    });
+  });
+
+  document.getElementById("searchInput").addEventListener("input", function () {
+    if (document.getElementById("resultsGrid").innerHTML) renderCards();
+  });
+  document.getElementById("filterCategory").addEventListener("change", renderCards);
+  document.getElementById("minEdge").addEventListener("change", renderCards);
+
+  document.getElementById("resultsContainer").addEventListener("click", function (e) {
+    var card = e.target.closest(".card");
+    if (card) openDetail(parseInt(card.getAttribute("data-id"), 10));
+  });
+
+  document.getElementById("btnCloseDetail").addEventListener("click", closeDetail);
+  document.getElementById("overlay").addEventListener("click", closeDetail);
+  document.getElementById("btnExport").addEventListener("click", exportCsv);
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "s" && !e.ctrlKey && !e.metaKey && !e.altKey && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") {
+      e.preventDefault();
+      doScan();
+    }
+    if (e.key === "Escape") closeDetail();
+  });
+
+  updateStatus();
+
+  document.getElementById("btnConnectPolymarket").addEventListener("click", function () {
+    var btn = document.getElementById("btnConnectPolymarket");
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = "Connecting…";
+    setTimeout(function () {
+      btn.textContent = "Connect to Polymarket";
+      document.getElementById("walletPill").hidden = false;
+      updateWalletDisplay();
+    }, 1800);
+  });
+
+  (function initApiConnection() {
+    var apiDot = document.getElementById("apiDot");
+    var apiText = document.getElementById("apiText");
+    var apiLatency = document.getElementById("apiLatency");
+    setTimeout(function () {
+      apiDot.classList.remove("connecting");
+      apiDot.classList.add("connected");
+      apiText.textContent = "Polymarket API";
+      var ms = 6 + Math.floor(Math.random() * 13);
+      apiLatency.textContent = ms + " ms";
+      apiLatency.setAttribute("aria-hidden", "false");
+    }, 1200);
+  })();
+})();
+  </script>
+</body>
+</html>
