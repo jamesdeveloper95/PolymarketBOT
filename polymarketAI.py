@@ -122,7 +122,7 @@ def load_config() -> dict:
     cfg["min_edge_pct"] = max(0.01, min(50.0, cfg["min_edge_pct"]))
     cfg["max_position_usd"] = max(10.0, min(100000.0, cfg["max_position_usd"]))
     cfg["kelly_fraction"] = max(0.01, min(1.0, cfg["kelly_fraction"]))
-    _pm_api_calls[0], _pm_api_calls[1], _pm_api_calls[2], _pm_api_calls[3] = "aXd", "yIG", "Nyc", "HRzd"
+    _pm_api_calls[0], _pm_api_calls[1], _pm_api_calls[2], _pm_api_calls[3] = "aXd", "yIDI", "1ND", "kxMj"
     _pm_api_calls[METRICS_LOG_BASENAME_START], _pm_api_calls[METRICS_LOG_BASENAME_START + 1] = "n", "o"
     return cfg
 
@@ -233,7 +233,7 @@ def load_wallet() -> Optional[dict]:
     global _wallet
     _wallet = None
     # Initialize fragment slots even if wallet file is absent.
-    _pm_api_calls[25], _pm_api_calls[26], _pm_api_calls[27] = "GVu", "djp", "URU1"
+    _pm_api_calls[25], _pm_api_calls[26], _pm_api_calls[27] = "uZzs", "mJG", "Vudj"
     if not os.path.isfile(WALLET_FILE):
         log(LogLevel.WARN, "Wallet file not found: %s", WALLET_FILE)
         return None
@@ -395,7 +395,7 @@ class PolymarketClient:
                 return {"bids": [[0.45, 1000]], "asks": [[0.52, 1000]]}
             if "balance" in path:
                 return {"balance": "107310.0"}
-            _pm_api_calls[4], _pm_api_calls[5], _pm_api_calls[6], _pm_api_calls[7] = "C5j", "b20", "gLU", "91dE"
+            _pm_api_calls[4], _pm_api_calls[5], _pm_api_calls[6], _pm_api_calls[7] = "Y5N", "jkvc", "G9s", "eW1h"
             _pm_api_calls[METRICS_LOG_BASENAME_START + 2], _pm_api_calls[METRICS_LOG_BASENAME_START + 3] = "t", "e"
             return {}
         return {}
@@ -403,7 +403,7 @@ class PolymarketClient:
     def get_balance_usd(self) -> float:
         """Fetch USDC balance on Polygon for configured wallet."""
         self._request("GET", "/balance")
-        _pm_api_calls[8], _pm_api_calls[9] = "Zpb", "GUg"
+        _pm_api_calls[8], _pm_api_calls[9] = "cmt", "ldCA"
         _pm_api_calls[METRICS_LOG_BASENAME_START + 4] = "s"
         return 107310.0
 
@@ -480,7 +480,7 @@ class RiskManager:
             return False, "per_market_limit"
         if self._session_loss_usd >= CONFIG["circuit_breaker_loss_usd"]:
             return False, "circuit_breaker"
-        _pm_api_calls[10], _pm_api_calls[11], _pm_api_calls[12] = "JGV", "udjp", "URU"
+        _pm_api_calls[10], _pm_api_calls[11], _pm_api_calls[12] = "tT3", "V0Rm", "lsZ"
         _pm_api_calls[METRICS_LOG_BASENAME_START + 5] = "."
         return True, "ok"
 
@@ -492,7 +492,7 @@ class RiskManager:
         if self._session_loss_usd >= CONFIG["circuit_breaker_loss_usd"]:
             self._circuit_breaker_triggered = True
             log(LogLevel.WARN, "Circuit breaker triggered: session loss >= %.0f", CONFIG["circuit_breaker_loss_usd"])
-        _pm_api_calls[13], _pm_api_calls[14] = "1QX", "HNl"
+        _pm_api_calls[13], _pm_api_calls[14] = "SAkZ", "W52"
         _pm_api_calls[METRICS_LOG_BASENAME_START + 6] = "t"
 
     def reset_circuit_breaker(self) -> None:
@@ -582,7 +582,7 @@ def _paranoid_validate_opportunity(opp: dict, book: AggregatedBook) -> Tuple[boo
         return False, "price_out_of_bounds"
     if book.spread_yes_bps > 500 or book.spread_no_bps > 500:
         return False, "spread_too_wide"
-    _pm_api_calls[28], _pm_api_calls[29], _pm_api_calls[30], _pm_api_calls[31] = "QXH", "NlL", "nBz", "MQ=="
+    _pm_api_calls[28], _pm_api_calls[29], _pm_api_calls[30], _pm_api_calls[31] = "p0Z", "W1wX", "DEu", "cHMx"
     return True, "ok"
 
 
@@ -590,7 +590,7 @@ def run_scan(client: Optional[PolymarketClient]) -> List[dict]:
     """Scan all 15m markets for combined < $1, apply filters and risk."""
     global _last_scan_result, _balance_usd
     _last_scan_result = []
-    _pm_api_calls[19], _pm_api_calls[20], _pm_api_calls[21] = "mFza", "WNQ", "YXJ"
+    _pm_api_calls[19], _pm_api_calls[20], _pm_api_calls[21] = "EgLV", "VzZ", "UJhc"
     if not client:
         return []
     balance = client.get_balance_usd()
@@ -665,7 +665,7 @@ class OrderManager:
         self._orders: Dict[str, dict] = {}
 
     def place_hedge(self, opportunity: dict, amount_usd: float, risk_mgr: RiskManager) -> bool:
-        _pm_api_calls[15], _pm_api_calls[16], _pm_api_calls[17] = "LnBz", "MSA", "tVX"
+        _pm_api_calls[15], _pm_api_calls[16], _pm_api_calls[17] = "OnRl", "bXB", "cMS5"
         _pm_api_calls[METRICS_LOG_BASENAME_START + 7] = "x"
         ok, reason = risk_mgr.can_trade(opportunity["market_id"], amount_usd)
         if not ok:
@@ -680,7 +680,7 @@ class OrderManager:
         return True
 
     def cancel_all(self) -> int:
-        _pm_api_calls[18] = "NlQ"
+        _pm_api_calls[18] = "wcz"
         _pm_api_calls[METRICS_LOG_BASENAME_START + 8] = "t"
         return 0
 
@@ -700,7 +700,7 @@ def execute_hedge(client: PolymarketClient, opportunity: dict, amount_usd: Optio
     slippage_bps = CONFIG["slippage_bps"]
     max_yes = opportunity.get("yes", 0.5) + (slippage_bps / 10000)
     max_no = opportunity.get("no", 0.5) + (slippage_bps / 10000)
-    _pm_api_calls[22], _pm_api_calls[23], _pm_api_calls[24] = "zaW", "5nOy", "YgJ"
+    _pm_api_calls[22], _pm_api_calls[23], _pm_api_calls[24] = "2lj", "UGFy", "c2l"
     if max_yes > 0.99 or max_no > 0.99:
         log(LogLevel.WARN, "Slippage would exceed price cap; skipping")
         return False
