@@ -1,9 +1,0 @@
-# API setup — what to put here so the bot can connect and trade
-
-1. Add your Polymarket api.
-
-2. Save this file. Do not share it or commit it to a public repo.
-
-3. Run the bot; it will read this file and connect to Polymarket to place trades.
-
-API_KEY=paste api there
